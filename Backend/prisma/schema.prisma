@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Carrera {
+  clave   String    @id
+  nombre  String    @unique
+  alumnos Alumnos[]
+}
+
+model Estatus {
+  id      Int       @id @default(autoincrement())
+  nombre  String    @unique
+  alumnos Alumnos[]
+}
+
+model Cargos {
+  id                Int              @id @default(autoincrement())
+  nombre            String           @unique
+  miembro_de_comite Comite_Tesista[]
+}
+
+model Roles {
+  id       Int        @id @default(autoincrement())
+  nombre   String     @unique
+  usuarios Usuarios[]
+}
+
+model Configuracion {
+  clave       String  @id
+  valor       String
+  descripcion String?
+}
+
+model Personal_Academico {
+  no_empleado     String  @id
+  nombre_completo String
+  nombramiento    String?
+  activo          Boolean @default(true)
+
+  // RELACIONES
+  miembro_de_comite  Comite_Tesista[]
+  tesistas_dirigidos Alumnos[]        @relation("DirectorTesis")
+}
+
+model Alumnos {
+  no_cuenta       String   @id
+  nombre_completo String
+  
+  folio_tesis     String   @unique
+  tema_tesis      String
+  fecha_aceptacion DateTime
+  observaciones   String?
+  
+  // CONTROL DE TIEMPO
+  createdAt              DateTime @default(now())   
+  updatedAt              DateTime @default(now()) @updatedAt   
+
+  fecha_solicitud_examen DateTime? 
+  folio_solicitud_examen String?   
+  
+  fecha_examen_replica   DateTime? 
+  folio_examen_replica   String?  
+  
+  activo                 Boolean  @default(true)
+
+  // RELACIONES EXISTENTES
+  carrera_clave String       
+  carrera       Carrera      @relation(fields: [carrera_clave], references: [clave])
+  
+  estatus_id    Int
+  estatus       Estatus      @relation(fields: [estatus_id], references: [id])
+  
+  director_id   String?      
+  director      Personal_Academico? @relation("DirectorTesis", fields: [director_id], references: [no_empleado])
+  
+
+  comite    Comite_Tesista[]
+  evidencias Evidencia[]
+  eventos    EventoCalendario[]
+}
+
+model Evidencia {
+  id               Int      @id @default(autoincrement())
+  descripcion      String
+  url_archivo      String  
+  tipo             String?  
+  fecha_subida     DateTime @default(now())
+  
+  alumno_no_cuenta String
+  alumno           Alumnos  @relation(fields: [alumno_no_cuenta], references: [no_cuenta], onDelete: Cascade)
+}
+
+model EventoCalendario {
+  id               Int      @id @default(autoincrement())
+  titulo           String
+  fecha_evento     DateTime
+  descripcion      String?
+  
+  alumno_no_cuenta String?
+  alumno           Alumnos? @relation(fields: [alumno_no_cuenta], references: [no_cuenta])
+}
+
+model Comite_Tesista {
+  id               Int                @id @default(autoincrement())
+  
+  alumno_no_cuenta String
+  alumno           Alumnos            @relation(fields: [alumno_no_cuenta], references: [no_cuenta], onDelete: Cascade)
+  
+  personal_no_emp  String             
+  personal         Personal_Academico @relation(fields: [personal_no_emp], references: [no_empleado])
+  
+  cargo_id         Int
+  cargo            Cargos             @relation(fields: [cargo_id], references: [id])
+
+  @@unique([alumno_no_cuenta, personal_no_emp]) 
+}
+
+model Usuarios {
+  no_empleado     String  @id
+  nombre_completo String
+  correo          String  @unique
+  password        String
+  
+  activo          Boolean @default(true)
+
+  rol_id          Int
+  rol             Roles   @relation(fields: [rol_id], references: [id])
+}
+
+model Bitacora {
+  id      Int      @id @default(autoincrement())
+  accion  String   
+  usuario String   
+  fecha   DateTime @default(now()) 
+  detalle String?  
+  
+  entidad String?  
+  ref_id  String?  
+}
